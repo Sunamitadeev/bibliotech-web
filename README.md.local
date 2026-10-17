@@ -1,0 +1,200 @@
+# 📚 BiblioTech - Sistema de Gerenciamento de Biblioteca Universitária
+
+[![React](https://img.shields.io/badge/React-18.3.1-blue?logo=react)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-5.4.5-646CFF?logo=vite)](https://vitejs.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Strict_5.5-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
+[![TanStack Query](https://img.shields.io/badge/TanStack_Query-5.56-FF4154?logo=react-query)](https://tanstack.com/query)
+[![Zustand](https://img.shields.io/badge/Zustand-4.5-brown)](https://github.com/pmndrs/zustand)
+[![WAI-ARIA](https://img.shields.io/badge/Accessibility-WAI--ARIA_AA-success)](#-acessibilidade-a11y)
+[![Deploy Status](https://img.shields.io/badge/Deploy-Production_Ready-emerald)](#-deploy-em-produção)
+
+Uma Single Page Application (SPA) moderna, acessível e responsiva para gestão completa do acervo, empréstimos com prazo automático de **14 dias corridos**, fila de reservas inteligente com prioridade e lista de desejos de uma biblioteca universitária.
+
+
+---
+
+## 🏛️ Arquitetura do Sistema
+
+```mermaid
+flowchart TD
+    subgraph UI_Layer [Camada de Apresentação - React + Tailwind]
+        Nav[Header & Alternador de Perfil]
+        Cat[Catálogo com Debounce 350ms]
+        Det[Detalhes do Livro & Sanitização XSS]
+        Dash[Dashboard & Alertas de Prazo]
+        SlideDeck[Apresentação de Slides /slides]
+    end
+
+    subgraph State_Layer [Gerenciamento de Estado & Cache]
+        TQ[TanStack Query - Cache de Requisições Google Books]
+        Z_Auth[useAuthStore - Sessão Acadêmica]
+        Z_Lib[useLibraryStore - Empréstimos & Reservas]
+        Z_Notif[useNotificationStore - Toasts em Tempo Real]
+    end
+
+    subgraph Services_Layer [Serviços e Persistência Desacoplada]
+        GB_API[googleBooks.service.ts - Google Books API + Fallback]
+        Storage_SVC[storage.service.ts - ILibraryStorageService]
+        Sanitizer[sanitize.ts - DOMPurify]
+        DateUtils[dates.ts - Cálculo de 14 Dias Corridos]
+    end
+
+    subgraph Data_Layer [Armazenamento Local]
+        LS[(LocalStorage - Empréstimos, Reservas, Wishlist)]
+    end
+
+    Cat --> TQ --> GB_API
+    Det --> Sanitizer
+    Dash --> Z_Lib --> Storage_SVC --> LS
+    Nav --> Z_Auth --> Storage_SVC
+    Storage_SVC -.->|Dispara Eventos Reativos| Z_Notif
+```
+
+---
+
+## ✨ Funcionalidades Principais
+
+- 🔍 **Catálogo Dinâmico & Debounce (350ms):** Pesquisa ágil por título, autor, assunto ou código ISBN via Google Books API com paginação e cache inteligente.
+- 🏷️ **Filtros por Categoria & Ordenação:** Navegação por categorias (*Tecnologia & Computação*, *Ciência*, *Ficção*, *História*, *Filosofia*, *Negócios*) e ordenação por relevância, mais recentes ou ordem alfabética.
+- 🛡️ **Mitigação de XSS com DOMPurify:** Sinopses externas são rigorosamente sanitizadas, prevenindo injeções de scripts maliciosos sem perder a formatação semântica original.
+- 📅 **Empréstimo Automático de 14 Dias Corridos:** Cálculo exato da data de devolução somando 14 dias corridos, com controle de cotas acadêmicas por RA.
+- ⏳ **Fila de Espera Inteligente (Reservas):** Quando um título atinge 0 cópias disponíveis, o sistema posiciona o aluno na fila com prioridade cronológica (`#1 na fila`, `#2 na fila`).
+- 🔔 **Notificações Reativas:** Devoluções liberam o estoque e emitem avisos em tempo real tanto para a fila de espera quanto para alunos que guardaram o livro na **Lista de Desejos**.
+- 📊 **Dashboard Acadêmico Completo (`/dashboard`):**
+  - **Empréstimos Ativos:** Destaque visual vermelho para livros atrasados, amarelo para livros próximos do vencimento e verde para prazos regulares.
+  - **Ação Devolver Agora:** Baixa instantânea e reposição imediata no acervo.
+  - **Ação Renovar (+14d):** Extensão de prazo em até 2 vezes, bloqueada caso haja outros alunos na fila de espera.
+  - **Abas Dedicadas:** Histórico de devoluções, acompanhamento de reservas ativas e lista de desejos.
+- ♿ **Acessibilidade Completa (WAI-ARIA):** Focus trap robusto em modais, suporte total a teclado (`Escape`, `Tab`, `Shift+Tab`), regiões `aria-live="polite"` e validação de formulários com React Hook Form + Zod.
+- 📑 **Modo Apresentação (/slides):** Rota integrada com 10 slides interativos, atalhos de teclado e notas de orador para ensaios e bancas avaliadoras.
+
+---
+
+## 🛠️ Stack Tecnológica
+
+| Tecnologia | Versão | Finalidade |
+| :--- | :--- | :--- |
+| **React** | 18.3.1 | Biblioteca central para construção da interface |
+| **TypeScript** | 5.5.3 | Tipagem estrita de contratos de domínio (`strict: true`) |
+| **Vite** | 5.4.5 | Bundler de alta performance e servidor de desenvolvimento |
+| **React Router DOM** | 6.26.2 | Roteamento declarativo com *lazy loading* de rotas |
+| **Tailwind CSS** | 3.4.11 | Estilização utilitária com design system profissional |
+| **TanStack Query** | 5.56.2 | Cache e gerenciamento de estado assíncrono para a Google Books API |
+| **Zustand** | 4.5.5 | Gerenciamento de estado global leve e reativo |
+| **React Hook Form + Zod**| 7.53 / 3.23 | Validação de formulários e mitigação de dados inconsistentes |
+| **DOMPurify** | 3.1.6 | Higienização de sinopses HTML contra vulnerabilidades XSS |
+| **Lucide React** | 0.441.0 | Pacote de ícones acessíveis e consistentes |
+
+---
+
+## 📂 Estrutura de Diretórios
+
+```
+Capstone-Web/
+├── .env.example                         # Modelo de variáveis de ambiente
+├── .gitignore                           # Exclusões do Git (node_modules, dist, .env)
+├── README.md                            # Documentação oficial do projeto
+├── SLIDES.md                            # Roteiro e slides para apresentação e ensaio
+├── vercel.json                          # Configuração de rewrites SPA para a Vercel
+├── netlify.toml                         # Configuração de build e redirects para o Netlify
+├── index.html                           # Entrypoint HTML com meta tags e fontes
+├── package.json                         # Dependências e scripts do projeto
+├── tailwind.config.js                   # Configuração de cores e extensões de design
+├── tsconfig.json                        # TypeScript strict mode ativado
+├── public/
+│   ├── _redirects                       # Regra de roteamento SPA para Netlify
+│   ├── favicon.svg                      # Favicon customizado em SVG
+│   └── placeholder-cover.svg            # Capa reserva para livros sem imagem
+└── src/
+    ├── main.tsx                         # Bootstrap da aplicação
+    ├── App.tsx                          # Provedor do React Query e BrowserRouter
+    ├── index.css                        # Estilos globais e diretivas Tailwind
+    ├── vite-env.d.ts                    # Tipagens de variáveis de ambiente
+    ├── types/                           # Contratos TypeScript (Book, Loan, User, etc.)
+    ├── utils/                           # Utilitários (dates, sanitize, debounce, cn)
+    ├── services/
+    │   ├── api/googleBooks.service.ts   # Integração com API externa + fallback
+    │   └── storage/storage.service.ts   # Camada desacoplada de persistência LocalStorage
+    ├── store/                           # Stores Zustand (Auth, Library, Notifications)
+    ├── components/
+    │   ├── ui/                          # Button, Input, Badge, Dialog, Toast, Card, Skeleton
+    │   └── layout/                      # Header, Footer e Layout padrão
+    ├── features/
+    │   ├── catalog/                     # Catálogo, SearchBar, CategoryFilter, BookCard
+    │   ├── book-details/                # Página de detalhes /books/:id e seletor de status
+    │   ├── loans/                       # Modal de empréstimo (React Hook Form + Zod)
+    │   ├── reservations/                # Modal de fila de espera e acompanhamento
+    │   ├── dashboard/                   # Painel com KPIs, empréstimos ativos e histórico
+    │   └── slides/                      # Modo de apresentação de slides interativo
+    └── router/AppRoutes.tsx             # Rotas com lazy loading e rota 404
+```
+
+---
+
+## 🚀 Como Executar o Projeto Localmente
+
+### Pré-requisitos
+- **Node.js:** versão 18.x ou superior
+- **npm:** versão 9.x ou superior
+- **Git** instalado no sistema
+
+### Passo a Passo
+
+```bash
+# 1. Clone o repositório
+git clone https://github.com/sunamita/Capstone-Web.git
+cd Capstone-Web
+
+# 2. Instale as dependências
+npm install
+
+# 3. Configure as variáveis de ambiente (opcional)
+cp .env.example .env.local
+
+# 4. Inicie o servidor de desenvolvimento
+npm run dev
+
+# 5. Abra no navegador
+# Acesse http://localhost:3000 (ou a porta indicada no terminal)
+```
+
+### Comandos de Verificação & Qualidade
+
+```bash
+# Validar tipagens em modo estrito (sem gerar bundle)
+npx tsc --noEmit
+
+# Compilar o bundle de produção otimizado
+npm run build
+
+# Pré-visualizar a build de produção localmente
+npm run preview
+```
+
+---
+
+## ☁️ Deploy em Produção
+
+### 1. Deploy na Vercel (Recomendado)
+O projeto já conta com o arquivo [`vercel.json`](vercel.json) configurado para tratar rotas SPA.
+1. Suba o projeto para o GitHub.
+2. Acesse o dashboard da [Vercel](https://vercel.com/) e clique em **"Import Project"**.
+3. Selecione o repositório. O framework **Vite** será detectado automaticamente.
+4. Clique em **Deploy**.
+
+### 2. Deploy no Netlify
+O projeto inclui [`netlify.toml`](netlify.toml) e [`public/_redirects`](public/_redirects).
+1. Conecte o repositório no [Netlify](https://www.netlify.com/).
+2. O Netlify usará automaticamente:
+   - **Build Command:** `npm run build`
+   - **Publish directory:** `dist`
+3. Clique em **Deploy Site**.
+
+---
+
+## 👥 Autores & Créditos
+
+- **Desenvolvedor(a):** Sunamita — Engenharia Frontend & Arquitetura de Software
+- **Projeto:** Trabalho de Conclusão de Curso (Capstone Project)
+- **Licença:** Este projeto está sob a licença [MIT](LICENSE).
