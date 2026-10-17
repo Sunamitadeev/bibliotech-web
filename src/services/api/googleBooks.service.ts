@@ -1,5 +1,6 @@
 import { Book, FilterParams, GoogleBooksApiResponse, GoogleBookItem } from '@/types';
 import { storageService } from '../storage';
+import { openLibraryService } from './openLibrary.service';
 
 const GOOGLE_BOOKS_BASE_URL = 'https://www.googleapis.com/books/v1/volumes';
 
@@ -108,12 +109,16 @@ export const googleBooksService = {
       const response = await fetch(url.toString());
 
       if (!response.ok) {
-        throw new Error(`Erro na API do Google Books: HTTP ${response.status}`);
+        throw new Error(`Google Books API HTTP ${response.status}`);
       }
 
       const data: GoogleBooksApiResponse = await response.json();
-
       let books: Book[] = (data.items || []).map(normalizeGoogleBook);
+
+      // If Google Books returned 0 results or had an empty query, try Open Library
+      if (books.length === 0) {
+        return await openLibraryService.searchBooks(params);
+      }
 
       // Client-side sort options for title asc/desc
       if (params.sort === 'title_asc') {
@@ -132,19 +137,36 @@ export const googleBooksService = {
         totalItems: data.totalItems || books.length,
       };
     } catch (error) {
-      console.warn('Erro ao consultar Google Books API, recorrendo a fallback:', error);
+      console.warn('Google Books API indisponível ou limitada, recorrendo à Open Library:', error);
+
+      try {
+        const olResult = await openLibraryService.searchBooks(params);
+        if (olResult.books.length > 0) {
+          return olResult;
+        }
+      } catch (olError) {
+        console.warn('Open Library também indisponível, recorrendo aos livros de fallback:', olError);
+      }
+
       // Fallback books in case of rate limit or network error
+      const fallbackBooks = getFallbackBooks(params);
       return {
-        books: getFallbackBooks(params),
-        totalItems: 4,
+        books: fallbackBooks,
+        totalItems: fallbackBooks.length,
       };
     }
   },
 
   /**
-   * Fetches single book by Google Volume ID
+   * Fetches single book by Google Volume ID or Open Library ID
    */
   async getBookById(id: string): Promise<Book | null> {
+    // If ID belongs to Open Library (e.g., OL... or works...)
+    if (id.startsWith('OL') || id.includes('works')) {
+      const olBook = await openLibraryService.getBookById(id);
+      if (olBook) return olBook;
+    }
+
     try {
       const url = new URL(`${GOOGLE_BOOKS_BASE_URL}/${encodeURIComponent(id)}`);
       const apiKey = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY;
@@ -154,17 +176,24 @@ export const googleBooksService = {
 
       const response = await fetch(url.toString());
 
-      if (!response.ok) {
-        throw new Error(`Erro ao buscar livro ${id}: HTTP ${response.status}`);
+      if (response.ok) {
+        const item: GoogleBookItem = await response.json();
+        return normalizeGoogleBook(item);
       }
-
-      const item: GoogleBookItem = await response.json();
-      return normalizeGoogleBook(item);
     } catch (error) {
-      console.warn(`Erro ao carregar livro ${id}, verificando fallback local:`, error);
-      const fallback = getFallbackBooks().find((b) => b.id === id);
-      return fallback || null;
+      console.warn(`Erro ao buscar livro ${id} no Google Books, consultando Open Library:`, error);
     }
+
+    // Try Open Library if Google failed or returned error
+    try {
+      const olBook = await openLibraryService.getBookById(id);
+      if (olBook) return olBook;
+    } catch {
+      // ignore
+    }
+
+    const fallback = getFallbackBooks().find((b) => b.id === id);
+    return fallback || null;
   },
 };
 
@@ -253,8 +282,23 @@ function getFallbackBooks(params?: FilterParams): Book[] {
   ];
 
   if (!params) return rawList;
-  if (params.onlyAvailable) {
-    return rawList.filter((b) => b.availableCopies > 0);
+
+  let filtered = rawList;
+  if (params.query && params.query.trim()) {
+    const q = params.query.toLowerCase().trim();
+    const matches = rawList.filter(
+      (b) =>
+        b.title.toLowerCase().includes(q) ||
+        b.authors.some((a) => a.toLowerCase().includes(q)) ||
+        b.categories.some((c) => c.toLowerCase().includes(q))
+    );
+    if (matches.length > 0) {
+      filtered = matches;
+    }
   }
-  return rawList;
+
+  if (params.onlyAvailable) {
+    filtered = filtered.filter((b) => b.availableCopies > 0);
+  }
+  return filtered;
 }
