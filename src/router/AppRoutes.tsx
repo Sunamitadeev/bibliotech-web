@@ -15,9 +15,6 @@ const BookDetailsPage = lazy(() =>
 const DashboardPage = lazy(() =>
   import('@/features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage }))
 );
-const SlidesPage = lazy(() =>
-  import('@/features/slides/SlidesPage').then((m) => ({ default: m.SlidesPage }))
-);
 
 const PageLoader: React.FC = () => (
   <div className="py-20 flex flex-col items-center justify-center space-y-4">
@@ -58,7 +55,6 @@ export const AppRoutes: React.FC = () => {
           <Route index element={<CatalogPage />} />
           <Route path="books/:id" element={<BookDetailsPage />} />
           <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="slides" element={<SlidesPage />} />
           <Route path="404" element={<NotFoundPage />} />
           <Route path="*" element={<Navigate to="/404" replace />} />
         </Route>

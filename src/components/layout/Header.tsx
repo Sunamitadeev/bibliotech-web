@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { BookOpen, Bell, User as UserIcon, LogOut, ChevronDown, Check, Calendar, Library, Presentation } from 'lucide-react';
+import { BookOpen, Bell, User as UserIcon, LogOut, ChevronDown, Check, Calendar, Library } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { useLibraryStore } from '@/store/useLibraryStore';
@@ -21,7 +21,6 @@ export const Header: React.FC = () => {
   const navLinks = [
     { to: '/', label: 'Catálogo do Acervo', icon: Library },
     { to: '/dashboard', label: 'Meu Painel', icon: Calendar, badge: activeLoans.length > 0 ? activeLoans.length : undefined },
-    { to: '/slides', label: 'Slides do Projeto', icon: Presentation },
   ];
 
   return (
