@@ -11,6 +11,8 @@
 
 Uma Single Page Application (SPA) moderna, acessível e responsiva para gestão completa do acervo, empréstimos com prazo automático de **14 dias corridos**, fila de reservas inteligente com prioridade e lista de desejos de uma biblioteca universitária.
 
+Os dados do acervo são obtidos da **[Google Books API](https://developers.google.com/books)** com **[Open Library API](https://openlibrary.org/developers/api)** como fonte secundária, garantindo resultados mesmo quando o Google Books está indisponível, limitado por cota ou sem resultados.
+
 
 ---
 
@@ -23,18 +25,19 @@ flowchart TD
         Cat[Catálogo com Debounce 350ms]
         Det[Detalhes do Livro & Sanitização XSS]
         Dash[Dashboard & Alertas de Prazo]
-        SlideDeck[Apresentação de Slides /slides]
     end
 
     subgraph State_Layer [Gerenciamento de Estado & Cache]
-        TQ[TanStack Query - Cache de Requisições Google Books]
+        TQ[TanStack Query - Cache de Requisições Google Books / Open Library]
         Z_Auth[useAuthStore - Sessão Acadêmica]
         Z_Lib[useLibraryStore - Empréstimos & Reservas]
         Z_Notif[useNotificationStore - Toasts em Tempo Real]
     end
 
     subgraph Services_Layer [Serviços e Persistência Desacoplada]
-        GB_API[googleBooks.service.ts - Google Books API + Fallback]
+        GB_API[googleBooks.service.ts - Google Books API]
+        OL_API[openLibrary.service.ts - Open Library API]
+        Fallback[Livros de Fallback Locais]
         Storage_SVC[storage.service.ts - ILibraryStorageService]
         Sanitizer[sanitize.ts - DOMPurify]
         DateUtils[dates.ts - Cálculo de 14 Dias Corridos]
@@ -45,6 +48,9 @@ flowchart TD
     end
 
     Cat --> TQ --> GB_API
+    Det --> TQ
+    GB_API -.->|Sem resultados ou erro| OL_API
+    OL_API -.->|Indisponível| Fallback
     Det --> Sanitizer
     Dash --> Z_Lib --> Storage_SVC --> LS
     Nav --> Z_Auth --> Storage_SVC
@@ -56,6 +62,7 @@ flowchart TD
 ## ✨ Funcionalidades Principais
 
 - 🔍 **Catálogo Dinâmico & Debounce (350ms):** Pesquisa ágil por título, autor, assunto ou código ISBN via Google Books API com paginação e cache inteligente.
+- 🌐 **Múltiplas Fontes de Dados (Open Library):** Se o Google Books falhar, atingir o limite de requisições ou não retornar resultados, a busca e os detalhes do livro são consultados automaticamente na Open Library API. Como última camada, o sistema exibe um acervo local de fallback.
 - 🏷️ **Filtros por Categoria & Ordenação:** Navegação por categorias (*Tecnologia & Computação*, *Ciência*, *Ficção*, *História*, *Filosofia*, *Negócios*) e ordenação por relevância, mais recentes ou ordem alfabética.
 - 🛡️ **Mitigação de XSS com DOMPurify:** Sinopses externas são rigorosamente sanitizadas, prevenindo injeções de scripts maliciosos sem perder a formatação semântica original.
 - 📅 **Empréstimo Automático de 14 Dias Corridos:** Cálculo exato da data de devolução somando 14 dias corridos, com controle de cotas acadêmicas por RA.
@@ -67,7 +74,6 @@ flowchart TD
   - **Ação Renovar (+14d):** Extensão de prazo em até 2 vezes, bloqueada caso haja outros alunos na fila de espera.
   - **Abas Dedicadas:** Histórico de devoluções, acompanhamento de reservas ativas e lista de desejos.
 - ♿ **Acessibilidade Completa (WAI-ARIA):** Focus trap robusto em modais, suporte total a teclado (`Escape`, `Tab`, `Shift+Tab`), regiões `aria-live="polite"` e validação de formulários com React Hook Form + Zod.
-- 📑 **Modo Apresentação (/slides):** Rota integrada com 10 slides interativos, atalhos de teclado e notas de orador para ensaios e bancas avaliadoras.
 
 ---
 
@@ -80,7 +86,9 @@ flowchart TD
 | **Vite** | 5.4.5 | Bundler de alta performance e servidor de desenvolvimento |
 | **React Router DOM** | 6.26.2 | Roteamento declarativo com *lazy loading* de rotas |
 | **Tailwind CSS** | 3.4.11 | Estilização utilitária com design system profissional |
-| **TanStack Query** | 5.56.2 | Cache e gerenciamento de estado assíncrono para a Google Books API |
+| **TanStack Query** | 5.56.2 | Cache e gerenciamento de estado assíncrono para as APIs de livros |
+| **Google Books API** | v1 | Fonte principal de dados do acervo (busca e detalhes) |
+| **Open Library API** | — | Fonte secundária de dados, usada quando o Google Books falha ou não retorna resultados |
 | **Zustand** | 4.5.5 | Gerenciamento de estado global leve e reativo |
 | **React Hook Form + Zod**| 7.53 / 3.23 | Validação de formulários e mitigação de dados inconsistentes |
 | **DOMPurify** | 3.1.6 | Higienização de sinopses HTML contra vulnerabilidades XSS |
@@ -95,7 +103,6 @@ Capstone-Web/
 ├── .env.example                         # Modelo de variáveis de ambiente
 ├── .gitignore                           # Exclusões do Git (node_modules, dist, .env)
 ├── README.md                            # Documentação oficial do projeto
-├── SLIDES.md                            # Roteiro e slides para apresentação e ensaio
 ├── vercel.json                          # Configuração de rewrites SPA para a Vercel
 ├── netlify.toml                         # Configuração de build e redirects para o Netlify
 ├── index.html                           # Entrypoint HTML com meta tags e fontes
@@ -114,7 +121,8 @@ Capstone-Web/
     ├── types/                           # Contratos TypeScript (Book, Loan, User, etc.)
     ├── utils/                           # Utilitários (dates, sanitize, debounce, cn)
     ├── services/
-    │   ├── api/googleBooks.service.ts   # Integração com API externa + fallback
+    │   ├── api/googleBooks.service.ts   # Integração com Google Books API + fallback
+    │   ├── api/openLibrary.service.ts   # Integração com Open Library API (fonte secundária)
     │   └── storage/storage.service.ts   # Camada desacoplada de persistência LocalStorage
     ├── store/                           # Stores Zustand (Auth, Library, Notifications)
     ├── components/
@@ -125,8 +133,7 @@ Capstone-Web/
     │   ├── book-details/                # Página de detalhes /books/:id e seletor de status
     │   ├── loans/                       # Modal de empréstimo (React Hook Form + Zod)
     │   ├── reservations/                # Modal de fila de espera e acompanhamento
-    │   ├── dashboard/                   # Painel com KPIs, empréstimos ativos e histórico
-    │   └── slides/                      # Modo de apresentação de slides interativo
+    │   └── dashboard/                   # Painel com KPIs, empréstimos ativos e histórico
     └── router/AppRoutes.tsx             # Rotas com lazy loading e rota 404
 ```
 
