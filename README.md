@@ -6,13 +6,28 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
 [![TanStack Query](https://img.shields.io/badge/TanStack_Query-5.56-FF4154?logo=react-query)](https://tanstack.com/query)
 [![Zustand](https://img.shields.io/badge/Zustand-4.5-brown)](https://github.com/pmndrs/zustand)
-[![WAI-ARIA](https://img.shields.io/badge/Accessibility-WAI--ARIA_AA-success)](#-acessibilidade-a11y)
-[![Deploy Status](https://img.shields.io/badge/Deploy-Production_Ready-emerald)](#-deploy-em-produção)
+[![WAI-ARIA](https://img.shields.io/badge/Accessibility-WAI--ARIA_AA-success)](#-funcionalidades-principais)
+[![Vercel](https://img.shields.io/badge/Deploy-Vercel-000000?logo=vercel)](https://bibliotech-web-2rp2.vercel.app/)
 
 Uma Single Page Application (SPA) moderna, acessível e responsiva para gestão completa do acervo, empréstimos com prazo automático de **14 dias corridos**, fila de reservas inteligente com prioridade e lista de desejos de uma biblioteca universitária.
 
 Os dados do acervo são obtidos da **[Google Books API](https://developers.google.com/books)** com **[Open Library API](https://openlibrary.org/developers/api)** como fonte secundária, garantindo resultados mesmo quando o Google Books está indisponível, limitado por cota ou sem resultados.
 
+## 🔗 Links
+
+| Recurso | Link |
+| :--- | :--- |
+| 🌐 **Aplicação em produção** | **[bibliotech-web-2rp2.vercel.app](https://bibliotech-web-2rp2.vercel.app/)** |
+| 📦 **Repositório** | [GitLab — projeto-final](https://gitlab.com/jala-university1/cohort-3/PT.CO.CSWB-366.GA.T2.26.M2/SA/sunamita-santana/projeto-final) |
+
+### Rotas da aplicação
+
+| Rota | Descrição |
+| :--- | :--- |
+| [`/`](https://bibliotech-web-2rp2.vercel.app/) | Catálogo com busca, filtros por categoria e ordenação |
+| `/books/:id` | Detalhes do livro, empréstimo, reserva e lista de desejos |
+| [`/dashboard`](https://bibliotech-web-2rp2.vercel.app/dashboard) | Painel do aluno: empréstimos, reservas, histórico e desejos |
+| `*` | Página 404 personalizada |
 
 ---
 
@@ -99,7 +114,7 @@ flowchart TD
 ## 📂 Estrutura de Diretórios
 
 ```
-Capstone-Web/
+projeto-final/
 ├── .env.example                         # Modelo de variáveis de ambiente
 ├── .gitignore                           # Exclusões do Git (node_modules, dist, .env)
 ├── README.md                            # Documentação oficial do projeto
@@ -150,8 +165,8 @@ Capstone-Web/
 
 ```bash
 # 1. Clone o repositório
-git clone https://github.com/sunamita/Capstone-Web.git
-cd Capstone-Web
+git clone https://gitlab.com/jala-university1/cohort-3/PT.CO.CSWB-366.GA.T2.26.M2/SA/sunamita-santana/projeto-final.git
+cd projeto-final
 
 # 2. Instale as dependências
 npm install
@@ -163,8 +178,20 @@ cp .env.example .env.local
 npm run dev
 
 # 5. Abra no navegador
-# Acesse http://localhost:3000 (ou a porta indicada no terminal)
+# Acesse http://localhost:3000
 ```
+
+### Variáveis de Ambiente
+
+Todas são **opcionais** — a aplicação funciona sem nenhuma configuração.
+
+| Variável | Descrição |
+| :--- | :--- |
+| `VITE_GOOGLE_BOOKS_API_KEY` | Chave da Google Books API. Aumenta a cota de requisições; sem ela, o app usa a cota pública e recorre à Open Library quando necessário. |
+| `VITE_APP_TITLE` | Título da aplicação. |
+| `VITE_APP_DESCRIPTION` | Descrição da aplicação. |
+
+> Na Vercel, configure as variáveis em **Settings → Environment Variables**.
 
 ### Comandos de Verificação & Qualidade
 
@@ -183,9 +210,15 @@ npm run preview
 
 ## ☁️ Deploy em Produção
 
+A aplicação está publicada na **Vercel**, com deploy contínuo a partir da branch `main`:
+
+👉 **https://bibliotech-web-2rp2.vercel.app/**
+
+No build de produção, chamadas `console.*` são removidas automaticamente (configuração `esbuild.drop` em [`vite.config.ts`](vite.config.ts)), mantendo o console do navegador limpo.
+
 ### 1. Deploy na Vercel (Recomendado)
 O projeto já conta com o arquivo [`vercel.json`](vercel.json) configurado para tratar rotas SPA.
-1. Suba o projeto para o GitHub.
+1. Suba o projeto para um repositório Git (GitHub ou GitLab).
 2. Acesse o dashboard da [Vercel](https://vercel.com/) e clique em **"Import Project"**.
 3. Selecione o repositório. O framework **Vite** será detectado automaticamente.
 4. Clique em **Deploy**.
